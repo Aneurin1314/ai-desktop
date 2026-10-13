@@ -199,6 +199,11 @@ button {
   box-shadow: 0 12px 24px rgba(123, 92, 255, 0.35);
 }
 
+.primary-button.small {
+  padding: 8px 12px;
+  font-size: 0.8rem;
+}
+
 .primary-button:disabled {
   opacity: 0.7;
   cursor: not-allowed;
@@ -289,6 +294,30 @@ button {
     transform: scale(1);
     opacity: 1;
   }
+}
+
+.file-panel {
+  border-top: 1px solid rgba(160, 179, 255, 0.12);
+  background: rgba(8, 15, 25, 0.6);
+  padding: 16px 24px 0;
+}
+
+.file-meta-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.file-pill {
+  display: inline-flex;
+  align-items: center;
+  background: rgba(121, 139, 255, 0.12);
+  border: 1px solid rgba(121, 139, 255, 0.22);
+  color: #dfe9ff;
+  border-radius: 999px;
+  padding: 7px 12px;
+  font-size: 0.8rem;
 }
 
 .composer {

@@ -45,10 +45,27 @@ const createOpenAIReply = async (message, apiKey) => {
   return textBlock?.text || 'OpenAI 返回成功，但未解析到有效内容。';
 };
 
+const buildFileSummary = (fileName, content) => {
+  const trimmed = String(content || '').trim();
+  const lines = trimmed ? trimmed.split(/\r?\n/).filter(Boolean) : [];
+  const lineCount = lines.length;
+  const charCount = trimmed.length;
+  const preview = trimmed.slice(0, 180).replace(/\s+/g, ' ');
+
+  return [
+    `文件名：${fileName}`,
+    `字符数：${charCount}，行数：${lineCount}`,
+    `摘要预览：${preview || '空内容'}`,
+    '',
+    '该文件已被本地 AI Desktop 识别为可分析文本内容。下一步可继续提问：总结重点、改写、翻译、提取关键字段。'
+  ].join('\n');
+};
+
 app.get('/api/health', (_req, res) => {
   res.json({
     status: 'ok',
-    models: [' Mock Demo Model', 'OpenAI GPT-4o', 'Claude 3.5 Sonnet', 'Local LLM (llama.cpp)']
+    models: ['Mock Demo Model', 'OpenAI GPT-4o', 'Claude 3.5 Sonnet', 'Local LLM (llama.cpp)'],
+    features: ['chat', 'file-analysis', 'model-switching']
   });
 });
 
@@ -71,6 +88,46 @@ app.post('/api/chat', async (req, res) => {
     console.error('chat error:', error);
     return res.status(500).json({
       error: error?.message || 'AI 请求失败'
+    });
+  }
+});
+
+app.post('/api/files/analyze', async (req, res) => {
+  try {
+    const {
+      fileName = 'document.txt',
+      content = '',
+      model = 'Mock Demo Model',
+      apiKey = ''
+    } = req.body || {};
+
+    if (!String(content).trim()) {
+      return res.status(400).json({ error: '文件内容不能为空' });
+    }
+
+    if (String(model).includes('OpenAI')) {
+      const prompt = [
+        '请对以下文件内容进行总体分析，并返回：',
+        '1. 重点总结',
+        '2. 关键事项',
+        '3. 对该文件的建议和可能用途',
+        '',
+        `文件名：${fileName}`,
+        '',
+        String(content).slice(0, 12000)
+      ].join('\n');
+
+      const reply = await createOpenAIReply(prompt, apiKey);
+      return res.json({ summary: reply });
+    }
+
+    return res.json({
+      summary: buildFileSummary(fileName, content)
+    });
+  } catch (error) {
+    console.error('file analyze error:', error);
+    return res.status(500).json({
+      error: error?.message || '文件分析失败'
     });
   }
 });

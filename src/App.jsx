@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { getHealthStatus, sendChatMessage } from './services/chatService';
+import { analyzeFileContent } from './services/fileService';
 
 const initialMessages = [
   {
@@ -17,6 +18,7 @@ const modelOptions = [
 ];
 
 function App() {
+  const fileInputRef = useRef(null);
   const [messages, setMessages] = useState(initialMessages);
   const [input, setInput] = useState('');
   const [selectedModel, setSelectedModel] = useState(
@@ -30,6 +32,9 @@ function App() {
   );
   const [backendStatus, setBackendStatus] = useState('检查中...');
   const [isSending, setIsSending] = useState(false);
+  const [isAnalyzingFile, setIsAnalyzingFile] = useState(false);
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [fileStatus, setFileStatus] = useState('未选择文件');
 
   useEffect(() => {
     localStorage.setItem('ai-desktop-model', selectedModel);
@@ -111,6 +116,68 @@ function App() {
       ]);
     } finally {
       setIsSending(false);
+    }
+  };
+
+  const handleFileChange = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const isTextLike =
+      file.type.startsWith('text/') ||
+      /\.(txt|md|csv|json|log|yaml|yml)$/i.test(file.name);
+
+    if (!isTextLike) {
+      setFileStatus('当前版本支持文本类文件，例如 .txt, .md, .json, .csv');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const content = String(reader.result || '');
+      setSelectedFile({
+        name: file.name,
+        size: file.size,
+        content
+      });
+      setFileStatus(`已加载：${file.name} (${Math.max(1, Math.ceil(content.length / 1024))} KB)`);
+    };
+    reader.readAsText(file);
+  };
+
+  const handleAnalyzeSelectedFile = async () => {
+    if (!selectedFile || isAnalyzingFile) return;
+
+    setIsAnalyzingFile(true);
+    try {
+      const summary = await analyzeFileContent({
+        fileName: selectedFile.name,
+        content: selectedFile.content,
+        model: selectedModel,
+        apiKey,
+        baseUrl
+      });
+
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: Date.now() + 3,
+          role: 'assistant',
+          content: `文件分析：${selectedFile.name}\n\n${summary}`
+        }
+      ]);
+      setFileStatus(`已分析：${selectedFile.name}`);
+    } catch (error) {
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: Date.now() + 4,
+          role: 'assistant',
+          content: `文件分析失败：${error.message}`
+        }
+      ]);
+    } finally {
+      setIsAnalyzingFile(false);
     }
   };
 
@@ -216,6 +283,29 @@ function App() {
           )}
         </section>
 
+        <div className="file-panel">
+          <div className="file-meta-row">
+            <span className="file-pill">{fileStatus}</span>
+            <button className="secondary-button" onClick={() => fileInputRef.current?.click()}>
+              选择文件
+            </button>
+            <button
+              className="primary-button small"
+              onClick={handleAnalyzeSelectedFile}
+              disabled={!selectedFile || isAnalyzingFile}
+            >
+              {isAnalyzingFile ? '分析中...' : '分析文件'}
+            </button>
+          </div>
+          <input
+            ref={fileInputRef}
+            type="file"
+            hidden
+            accept=".txt,.md,.csv,.json,.log,.yaml,.yml,text/*"
+            onChange={handleFileChange}
+          />
+        </div>
+
         <div className="composer">
           <textarea
             rows={3}
@@ -230,7 +320,9 @@ function App() {
             }}
           />
           <div className="composer-actions">
-            <button className="secondary-button">附件</button>
+            <button className="secondary-button" onClick={() => fileInputRef.current?.click()}>
+              附件
+            </button>
             <button className="primary-button" onClick={handleSend} disabled={isSending}>
               {isSending ? '处理中...' : '发送'}
             </button>
