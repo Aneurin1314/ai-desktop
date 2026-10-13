@@ -3,16 +3,21 @@
   "private": true,
   "version": "0.1.0",
   "main": "electron/main.js",
-  "type": "module",
   "scripts": {
-    "dev": "concurrently -k \"npm:dev:render\" \"npm:dev:electron\"",
+    "dev": "concurrently -k \"npm:dev:server\" \"npm:dev:render\" \"npm:dev:electron\"",
     "dev:render": "vite --host 0.0.0.0",
-    "dev:electron": "wait-on tcp:5173 && electron .",
+    "dev:server": "node server.js",
+    "dev:electron": "wait-on tcp:5173 tcp:3001 && electron .",
     "build": "vite build",
-    "start": "electron ."
+    "start": "electron .",
+    "server": "node server.js"
   },
   "dependencies": {
-    "electron": "^31.0.2"
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "electron": "^31.0.2",
+    "express": "^4.21.0",
+    "openai": "^4.58.1"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.3.1",

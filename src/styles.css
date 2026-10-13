@@ -43,7 +43,7 @@ button {
 }
 
 .sidebar {
-  width: 280px;
+  width: 300px;
   padding: 22px 18px;
   background: rgba(9, 17, 28, 0.9);
   border-right: 1px solid rgba(158, 175, 255, 0.12);
@@ -118,13 +118,20 @@ button {
   text-transform: uppercase;
 }
 
-.model-select {
+.model-select,
+.text-input {
   width: 100%;
   padding: 10px 12px;
   border-radius: 10px;
   border: 1px solid rgba(153, 166, 255, 0.18);
   background: rgba(10, 18, 31, 0.9);
   color: #edf4ff;
+}
+
+.status-text {
+  margin: 10px 2px 0;
+  color: #a9c2ff;
+  font-size: 0.8rem;
 }
 
 .quick-actions {

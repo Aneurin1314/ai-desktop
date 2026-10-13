@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { getHealthStatus, sendChatMessage } from './services/chatService';
 
 const initialMessages = [
   {
@@ -18,8 +19,51 @@ const modelOptions = [
 function App() {
   const [messages, setMessages] = useState(initialMessages);
   const [input, setInput] = useState('');
-  const [selectedModel, setSelectedModel] = useState(modelOptions[0]);
+  const [selectedModel, setSelectedModel] = useState(
+    () => localStorage.getItem('ai-desktop-model') || modelOptions[3]
+  );
+  const [apiKey, setApiKey] = useState(
+    () => localStorage.getItem('ai-desktop-api-key') || ''
+  );
+  const [baseUrl, setBaseUrl] = useState(
+    () => localStorage.getItem('ai-desktop-base-url') || 'http://localhost:3001'
+  );
+  const [backendStatus, setBackendStatus] = useState('检查中...');
   const [isSending, setIsSending] = useState(false);
+
+  useEffect(() => {
+    localStorage.setItem('ai-desktop-model', selectedModel);
+  }, [selectedModel]);
+
+  useEffect(() => {
+    localStorage.setItem('ai-desktop-api-key', apiKey);
+  }, [apiKey]);
+
+  useEffect(() => {
+    localStorage.setItem('ai-desktop-base-url', baseUrl);
+  }, [baseUrl]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const checkBackend = async () => {
+      try {
+        const status = await getHealthStatus(baseUrl);
+        if (!cancelled) {
+          setBackendStatus(`已连接：${status.status}`);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setBackendStatus('后端未连接，请先启动：npm run dev');
+        }
+      }
+    };
+
+    checkBackend();
+    return () => {
+      cancelled = true;
+    };
+  }, [baseUrl]);
 
   const quickActions = useMemo(
     () => ['总结当前内容', '提炼要点', '写代码', '翻译'],
@@ -41,28 +85,31 @@ function App() {
     setIsSending(true);
 
     try {
-      const replyText = `已选择模型：${selectedModel}\n\n我已经收到你的请求：“${trimmed}”。\n\n下一步可以接入��\n- OpenAI / Azure / Anthropic API\n- 本地 llama.cpp\n- 文件问答 / 代码搜索 / 插件。`;
+      const replyText = await sendChatMessage({
+        message: trimmed,
+        model: selectedModel,
+        apiKey,
+        baseUrl
+      });
 
-      setTimeout(() => {
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: Date.now() + 1,
-            role: 'assistant',
-            content: replyText
-          }
-        ]);
-        setIsSending(false);
-      }, 600);
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: Date.now() + 1,
+          role: 'assistant',
+          content: replyText
+        }
+      ]);
     } catch (error) {
       setMessages((prev) => [
         ...prev,
         {
           id: Date.now() + 2,
           role: 'assistant',
-          content: '处理请求时发生错误，请检查模型配置。'
+          content: `请求失败：${error.message}`
         }
       ]);
+    } finally {
       setIsSending(false);
     }
   };
@@ -99,6 +146,27 @@ function App() {
               </option>
             ))}
           </select>
+        </div>
+
+        <div className="sidebar-card">
+          <p className="label">API Key</p>
+          <input
+            type="password"
+            className="text-input"
+            value={apiKey}
+            onChange={(e) => setApiKey(e.target.value)}
+            placeholder="可选：OpenAI API Key"
+          />
+        </div>
+
+        <div className="sidebar-card">
+          <p className="label">后端地址</p>
+          <input
+            className="text-input"
+            value={baseUrl}
+            onChange={(e) => setBaseUrl(e.target.value)}
+          />
+          <p className="status-text">{backendStatus}</p>
         </div>
 
         <div className="sidebar-card">
