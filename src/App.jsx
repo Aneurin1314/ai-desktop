@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { getHealthStatus, sendChatMessage } from './services/chatService';
 import { analyzeFileContent } from './services/fileService';
+import { builtInPlugins } from './services/pluginService';
+import { startVoiceCapture } from './services/voiceService';
 
 const initialMessages = [
   {
@@ -19,6 +21,9 @@ const modelOptions = [
 
 function App() {
   const fileInputRef = useRef(null);
+  const textareaRef = useRef(null);
+  const voiceSessionRef = useRef(null);
+
   const [messages, setMessages] = useState(initialMessages);
   const [input, setInput] = useState('');
   const [selectedModel, setSelectedModel] = useState(
@@ -35,6 +40,24 @@ function App() {
   const [isAnalyzingFile, setIsAnalyzingFile] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
   const [fileStatus, setFileStatus] = useState('未选择文件');
+  const [isListening, setIsListening] = useState(false);
+  const [voiceStatus, setVoiceStatus] = useState('语音输入已就绪');
+
+  useEffect(() => {
+    if (!window.electronAPI) return;
+
+    const handler = () => {
+      textareaRef.current?.focus();
+      setVoiceStatus('已通过快捷键聚焦聊天框');
+    };
+
+    const wrapped = window.electronAPI.onFocusChatInput(handler);
+    return () => {
+      if (window.electronAPI?.offFocusChatInput) {
+        window.electronAPI.offFocusChatInput(wrapped);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     localStorage.setItem('ai-desktop-model', selectedModel);
@@ -181,6 +204,38 @@ function App() {
     }
   };
 
+  const toggleVoiceInput = () => {
+    if (isListening) {
+      voiceSessionRef.current?.stop();
+      setIsListening(false);
+      setVoiceStatus('语音输入已停止');
+      return;
+    }
+
+    const recognition = startVoiceCapture({
+      onResult: (transcript) => {
+        setInput((prev) => `${prev}${prev ? ' ' : ''}${transcript}`.trim());
+      },
+      onError: (error) => {
+        setVoiceStatus(`语音识别失败：${error}`);
+        setIsListening(false);
+      },
+      onEnd: () => {
+        setIsListening(false);
+        setVoiceStatus('语音输入已就绪');
+      }
+    });
+
+    if (!recognition) {
+      setVoiceStatus('当前浏览器不支持 Web Speech API');
+      return;
+    }
+
+    voiceSessionRef.current = recognition;
+    setIsListening(true);
+    setVoiceStatus('正在听取语音输入...');
+  };
+
   return (
     <div className="app-shell">
       <aside className="sidebar">
@@ -254,7 +309,12 @@ function App() {
             <p className="eyebrow">工作区</p>
             <h2>AI 工作台</h2>
           </div>
-          <button className="ghost-button">新会话</button>
+          <div className="header-actions">
+            <button className="ghost-button" onClick={toggleVoiceInput}>
+              {isListening ? '停止语音' : '开始语音'}
+            </button>
+            <button className="ghost-button">新会话</button>
+          </div>
         </header>
 
         <section className="chat-area">
@@ -297,6 +357,14 @@ function App() {
               {isAnalyzingFile ? '分析中...' : '分析文件'}
             </button>
           </div>
+          <div className="plugin-row">
+            {builtInPlugins.map((plugin) => (
+              <div key={plugin.id} className="plugin-chip">
+                <span className="plugin-dot" />
+                {plugin.name}
+              </div>
+            ))}
+          </div>
           <input
             ref={fileInputRef}
             type="file"
@@ -307,7 +375,12 @@ function App() {
         </div>
 
         <div className="composer">
+          <div className="voice-bar">
+            <span className="voice-label">{voiceStatus}</span>
+            <span className="shortcut-label">快捷键：Ctrl + Shift + K</span>
+          </div>
           <textarea
+            ref={textareaRef}
             rows={3}
             value={input}
             onChange={(e) => setInput(e.target.value)}
@@ -322,6 +395,9 @@ function App() {
           <div className="composer-actions">
             <button className="secondary-button" onClick={() => fileInputRef.current?.click()}>
               附件
+            </button>
+            <button className="secondary-button" onClick={toggleVoiceInput}>
+              {isListening ? '停止语音' : '语音输入'}
             </button>
             <button className="primary-button" onClick={handleSend} disabled={isSending}>
               {isSending ? '处理中...' : '发送'}

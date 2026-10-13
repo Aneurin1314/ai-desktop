@@ -8,7 +8,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
     node: process.versions.node
   },
   send: (channel, data) => ipcRenderer.send(channel, data),
-  receive: (channel, func) => {
-    ipcRenderer.on(channel, (_event, ...args) => func(...args));
+  invoke: (channel, data) => ipcRenderer.invoke(channel, data),
+  onFocusChatInput: (callback) => {
+    const handler = (_event, value) => callback(value);
+    ipcRenderer.on('focus-chat-input', handler);
+    return handler;
+  },
+  offFocusChatInput: (handler) => {
+    ipcRenderer.removeListener('focus-chat-input', handler);
   }
 });

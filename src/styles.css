@@ -164,6 +164,12 @@ button {
   border-bottom: 1px solid rgba(160, 179, 255, 0.12);
 }
 
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
 .eyebrow {
   margin: 0;
   color: #8aa6ff;
@@ -320,6 +326,48 @@ button {
   font-size: 0.8rem;
 }
 
+.plugin-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+  padding-bottom: 12px;
+}
+
+.plugin-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(160, 179, 255, 0.18);
+  background: rgba(14, 24, 35, 0.7);
+  color: #edf4ff;
+  font-size: 0.8rem;
+}
+
+.plugin-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #81f2b6;
+  box-shadow: 0 0 16px rgba(129, 242, 182, 0.8);
+}
+
+.voice-bar {
+  display: flex;
+  justify-content: space-between;
+  padding: 0 2px 10px;
+  font-size: 0.78rem;
+  color: #afc3ff;
+}
+
+.voice-label,
+.shortcut-label {
+  display: inline-flex;
+  align-items: center;
+}
+
 .composer {
   padding: 18px 24px 24px;
   border-top: 1px solid rgba(160, 179, 255, 0.12);
@@ -345,6 +393,7 @@ button {
 .composer-actions {
   display: flex;
   justify-content: space-between;
+  gap: 10px;
   margin-top: 12px;
 }
 
